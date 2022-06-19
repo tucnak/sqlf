@@ -1,4 +1,4 @@
-module github.com/leporo/sqlf
+module github.com/tucnak/sqlf
 
 go 1.13
 

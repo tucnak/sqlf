@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/leporo/sqlf"
+	"github.com/tucnak/sqlf"
 )
 
 type dummyDB int

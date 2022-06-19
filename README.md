@@ -1,8 +1,8 @@
 # sqlf
 
-[![GoDoc Reference](https://godoc.org/github.com/leporo/sqlf?status.svg)](http://godoc.org/github.com/leporo/sqlf)
-![Build Status](https://github.com/leporo/sqlf/actions/workflows/build.yml/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/leporo/sqlf)](https://goreportcard.com/report/github.com/leporo/sqlf)
+[![GoDoc Reference](https://godoc.org/github.com/tucnak/sqlf?status.svg)](http://godoc.org/github.com/tucnak/sqlf)
+![Build Status](https://github.com/tucnak/sqlf/actions/workflows/build.yml/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tucnak/sqlf)](https://goreportcard.com/report/github.com/tucnak/sqlf)
 
 
 A fast SQL query builder for Go.
@@ -61,6 +61,8 @@ err := sqlf.From("orders").
     Select("SUM(amount) AS product_sales").To(&productSales).
     //
     Where("region IN (SELECT region FROM top_regions)").
+    // or via righthand binding
+    Where("region = any(?)", []string{"en", "pl", "uk"}).
     GroupBy("region, product").
     OrderBy("product_sales DESC").
     // Execute the query

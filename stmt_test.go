@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leporo/sqlf"
 	"github.com/stretchr/testify/require"
+	"github.com/tucnak/sqlf"
 )
 
 func TestNewBuilder(t *testing.T) {
@@ -292,6 +292,18 @@ func TestBindStruct(t *testing.T) {
 	require.Equal(t, "SELECT id, date, child_time, name FROM users WHERE id = ?", q.String())
 	require.Equal(t, []interface{}{2}, q.Args())
 	require.EqualValues(t, []interface{}{&u.ID, &u.Date, &u.ChildTime, &u.Name}, q.Dest())
+}
+
+func TestRightHandSelet(t *testing.T) {
+	sqlf := sqlf.PostgreSQL
+
+	exp := "SELECT * FROM boys WHERE age = any($1)"
+	ages := []int{1, 2, 3}
+	q := sqlf.Select("*").
+		From("boys").
+		Where("age = any(?)", ages)
+	require.Equal(t, exp, q.String())
+	require.Equal(t, []interface{}{ages}, q.Args())
 }
 
 func TestRightHandUpdate(t *testing.T) {

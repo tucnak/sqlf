@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leporo/sqlf"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
+	"github.com/tucnak/sqlf"
 )
 
 type dbEnv struct {
