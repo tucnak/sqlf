@@ -8,34 +8,39 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type pgtag = pgconn.CommandTag
-type ctx = context.Context
-type pgx_ interface {
-	Exec(ctx ctx, sql string, args ...any) (pgtag, error)
-	Query(ctx ctx, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx ctx, sql string, args ...any) pgx.Row
+type Conn interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-type StmtPgx struct {
-	*Stmt
-	ctx context.Context
-	tx  pgx_
+type Pgx struct {
+	ctx  context.Context
+	tx   Conn
+	s    string
+	args []any
 }
 
-func (s *Stmt) Via(ctx context.Context, tx pgx_) *StmtPgx {
-	return &StmtPgx{s, ctx, tx}
+func (s *Stmt) Via(ctx context.Context, tx Conn) Pgx {
+	return Pgx{ctx, tx, s.String(), s.Args()}
 }
 
-func (s *StmtPgx) Exec() (pgtag, error) {
-	return s.tx.Exec(s.ctx, s.Stmt.String(), s.Stmt.Args()...)
+func (s *Stmt) ViaClose(ctx context.Context, tx Conn) Pgx {
+	p := Pgx{ctx, tx, s.String(), s.Args()}
+	s.Close()
+	return p
 }
 
-func (s *StmtPgx) Row(dst ...any) error {
-	row := s.tx.QueryRow(s.ctx, s.Stmt.String(), s.Stmt.Args()...)
+func (p Pgx) Exec() (pgconn.CommandTag, error) {
+	return p.tx.Exec(p.ctx, p.s, p.args...)
+}
+
+func (p Pgx) Row(dst ...any) error {
+	row := p.tx.QueryRow(p.ctx, p.s, p.args...)
 	return row.Scan(dst...)
 }
-func (s *StmtPgx) Rows(dst any) error {
-	rows, err := s.tx.Query(s.ctx, s.Stmt.String(), s.Stmt.Args()...)
+func (p Pgx) Rows(dst any) error {
+	rows, err := p.tx.Query(p.ctx, p.s, p.args...)
 	if err != nil {
 		return err
 	}
