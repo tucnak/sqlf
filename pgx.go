@@ -15,34 +15,50 @@ type Conn interface {
 }
 
 type Pgx struct {
-	ctx  context.Context
-	tx   Conn
-	s    string
-	args []any
+	ctx   context.Context
+	tx    Conn
+	s     *Stmt
+	close bool
 }
 
 func (s *Stmt) Via(ctx context.Context, tx Conn) Pgx {
-	return Pgx{ctx, tx, s.String(), s.Args()}
+	return Pgx{ctx, tx, s, false}
 }
 
 func (s *Stmt) ViaClose(ctx context.Context, tx Conn) Pgx {
-	p := Pgx{ctx, tx, s.String(), s.Args()}
-	s.Close()
+	p := Pgx{ctx, tx, s, true}
 	return p
 }
 
-func (p Pgx) Exec() (pgconn.CommandTag, error) {
-	return p.tx.Exec(p.ctx, p.s, p.args...)
+func (p Pgx) Exec() (tag pgconn.CommandTag, err error) {
+	s, args := p.s.String(), p.s.Args()
+	tag, err = p.tx.Exec(p.ctx, s, args...)
+	if p.close {
+		p.s.Close()
+	}
+	return
 }
 
-func (p Pgx) Row(dst ...any) error {
-	row := p.tx.QueryRow(p.ctx, p.s, p.args...)
-	return row.Scan(dst...)
-}
-func (p Pgx) Rows(dst any) error {
-	rows, err := p.tx.Query(p.ctx, p.s, p.args...)
-	if err != nil {
-		return err
+func (p Pgx) Row(dst ...any) (err error) {
+	s, args := p.s.String(), p.s.Args()
+	row := p.tx.QueryRow(p.ctx, s, args...)
+	err = row.Scan(dst...)
+	if p.close {
+		p.s.Close()
 	}
-	return pgxscan.ScanAll(dst, rows)
+	return
+}
+func (p Pgx) Rows(dst any) (ret error) {
+	s, args := p.s.String(), p.s.Args()
+	rows, err := p.tx.Query(p.ctx, s, args...)
+	if err != nil {
+		ret = err
+		goto close
+	}
+	ret = pgxscan.ScanAll(dst, rows)
+close:
+	if p.close {
+		p.s.Close()
+	}
+	return
 }
