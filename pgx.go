@@ -2,6 +2,8 @@ package sqlf
 
 import (
 	"context"
+	"errors"
+	"reflect"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
@@ -50,12 +52,20 @@ func (p Pgx) Row(dst ...any) (err error) {
 }
 func (p Pgx) Rows(dst any) (ret error) {
 	s, args := p.s.String(), p.s.Args()
+	val := reflect.ValueOf(dst)
+	if val.Kind() != reflect.Ptr || val.IsNil() {
+		return errors.New("dst must be a non-nil pointer")
+	}
 	rows, err := p.tx.Query(p.ctx, s, args...)
 	if err != nil {
 		ret = err
 		goto close
 	}
-	ret = pgxscan.ScanAll(dst, rows)
+	if val.Elem().Kind() == reflect.Slice {
+		ret = pgxscan.ScanAll(dst, rows)
+	} else {
+		ret = pgxscan.ScanOne(dst, rows)
+	}
 close:
 	if p.close {
 		p.s.Close()
